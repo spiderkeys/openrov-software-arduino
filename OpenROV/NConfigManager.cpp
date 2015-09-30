@@ -24,8 +24,8 @@ namespace NConfigManager
 			Serial.print( F( "deadZone_min|" ) );
 			Serial.print( String( NConfigManager::m_deadZoneMin ) + "," );
 			Serial.print( F( "deadZone_max|" ) );
-			Serial.print( String( NConfigManager::m_deadZoneMax ) + ";" );
-			Serial.print( F( "water_type" ) );
+			Serial.print( String( NConfigManager::m_deadZoneMax ) + "," );
+			Serial.print( F( "water_type|" ) );
 			Serial.println( String( NConfigManager::m_waterType ) + ";" );
 
 		}
@@ -42,10 +42,10 @@ namespace NConfigManager
 		{
 			//TODO: Need to update the motors with new deadZone setting. Probably move
 			//deadzone to the thruster resposibilitiy
-			NConfigManager::m_throttleSmoothingIncrement = commandIn.m_arguments[1];
+			NConfigManager::m_throttleSmoothingIncrement 	= commandIn.m_arguments[1];
 			NConfigManager::m_deadZoneMin					= commandIn.m_arguments[2];
-			NConfigManager::m_deadZoneMax		= commandIn.m_arguments[3];
-			NConfigManager::m_waterType		= commandIn.m_arguments[4];
+			NConfigManager::m_deadZoneMax					= commandIn.m_arguments[3];
+			NConfigManager::m_waterType						= commandIn.m_arguments[4];
 		}
 	}
 }
