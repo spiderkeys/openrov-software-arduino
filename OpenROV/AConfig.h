@@ -48,18 +48,14 @@
 // Pololu MINIMUV
 #define HAS_POLOLU_MINIMUV (0)
 
-// MS5803_XXBA Depth Sensor
 #define HAS_MS5803_XXBA (1)
 #define MS5803_XXBA_I2C_ADDRESS 0x76
 
-// MPU9150 IMU
 #define HAS_MPU9150 (1)
 #define HAS_BNO055 (1)
 #define MPU9150_EEPROM_START 2
-#define HAS_ALT_SERVO (1)
-#define ALTS_MIDPOINT 1500
-#define ALTS_MINPOINT 1000
-#define ALTS_MAXPOINT 2000
+
+#define HAS_BNO055 (1)
 
 // BNO055 IMU
 #define HAS_BNO055 (1)
