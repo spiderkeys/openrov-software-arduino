@@ -23,6 +23,12 @@ namespace
 
 	CAdaBNO055 bno;
 
+	float baseRoll = 0.0f;
+	float basePitch = 0.0f;
+
+	float rollOffset			= 0.0f;
+	float pitchOffset			= 0.0f;
+
 	imu::Vector<3> euler;
 
 	void InitializeSensor()
@@ -66,6 +72,19 @@ void CBNO055::Initialize()
 
 void CBNO055::Update( CCommand& commandIn )
 {
+
+	if (commandIn.Equals("zeroimu"))
+	{
+		// Set the offset values to the current values
+		rollOffset	= baseRoll;
+		pitchOffset = basePitch;
+
+		Serial.print("IMU.offsets:");
+		Serial.print(rollOffset);
+		Serial.print("|");
+		Serial.print(pitchOffset);
+		Serial.println(";");
+	}
 
 	if( commandIn.Equals( "ping" ) )
 	{
@@ -214,13 +233,17 @@ void CBNO055::Update( CCommand& commandIn )
             if( euler.x() != 0.0f  )
             {
                 // These may need adjusting
-                
                 NDataManager::m_navData.YAW		= euler.x();
                 NDataManager::m_navData.HDGD	= euler.x();
+
+				NDataManager::m_controllerData.yaw = NDataManager::m_navData.HDGD;
             }
 			
-			NDataManager::m_navData.PITC	= euler.z();
-			NDataManager::m_navData.ROLL	= -euler.y();
+			basePitch = euler.z();
+			baseRoll = -euler.y();
+
+			NDataManager::m_navData.PITC	= basePitch - pitchOffset;
+			NDataManager::m_navData.ROLL	= baseRoll - rollOffset;
         }
 
 		if( inOverride )

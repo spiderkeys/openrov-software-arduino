@@ -31,6 +31,12 @@ namespace
 
 	int counter = 0;
 
+	float baseRoll = 0.0f;
+	float basePitch = 0.0f;
+
+	float rollOffset = 0.0f;
+	float pitchOffset = 0.0f;
+
 	//  MPU_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the sensor data and DMP output
 #define MPU_UPDATE_RATE  (20)
 
@@ -100,6 +106,19 @@ void CMPU9150::Update( CCommand& commandIn )
 		}
 
 		return;
+	}
+
+	if (commandIn.Equals( "zeroimu" ))
+	{
+		// Set the offset values to the current values
+		rollOffset = baseRoll;
+		pitchOffset = basePitch;
+
+		Serial.print( "IMU.offsets:" );
+		Serial.print( rollOffset );
+		Serial.print( "|" );
+		Serial.print( pitchOffset );
+		Serial.println( ";" );
 	}
 
 	if( commandIn.Equals( "ccal" ) )
@@ -297,8 +316,12 @@ void CMPU9150::Update( CCommand& commandIn )
 				NDataManager::m_navData.HDGD += 360;
 			}
 
-			NDataManager::m_navData.PITC = MPU.m_fusedEulerPose[VEC3_Y] * RAD_TO_DEGREE;
-			NDataManager::m_navData.ROLL = MPU.m_fusedEulerPose[VEC3_X] * RAD_TO_DEGREE;
+			basePitch	= MPU.m_fusedEulerPose[VEC3_Y] * RAD_TO_DEGREE;
+			baseRoll	= MPU.m_fusedEulerPose[VEC3_X] * RAD_TO_DEGREE;
+
+			NDataManager::m_navData.PITC = basePitch - pitchOffset;
+			NDataManager::m_navData.ROLL = baseRoll - rollOffset;
+
 			NDataManager::m_navData.YAW = MPU.m_fusedEulerPose[VEC3_Z] * RAD_TO_DEGREE;
 		}
 	}
