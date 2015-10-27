@@ -23,209 +23,225 @@ const int CThrusters::kMotorCount = 3;
 
 namespace
 {
-    CMotor port_motor( PORT_PIN );
-    CMotor vertical_motor( VERTICAL_PIN );
-    CMotor starboard_motor( STARBOARD_PIN );
+    CMotor m_portMotor( PORT_PIN );
+    CMotor m_verticalMotor( VERTICAL_PIN );
+    CMotor m_starboardMotor( STARBOARD_PIN );
 
-    int new_p	= MOTOR_TARGET_NEUTRAL_US;
-    int new_s	= MOTOR_TARGET_NEUTRAL_US;
-    int new_v	= MOTOR_TARGET_NEUTRAL_US;
-    int p		= MOTOR_TARGET_NEUTRAL_US;
-    int v		= MOTOR_TARGET_NEUTRAL_US;
-    int s		= MOTOR_TARGET_NEUTRAL_US;
+    int portTargetNew_us	= MOTOR_TARGET_NEUTRAL_US;
+    int starTargetNew_us	= MOTOR_TARGET_NEUTRAL_US;
+    int vertTargetNew_us	= MOTOR_TARGET_NEUTRAL_US;
+    int portTarget_us		= MOTOR_TARGET_NEUTRAL_US;
+    int vertTarget_us		= MOTOR_TARGET_NEUTRAL_US;
+    int starTarget_us		= MOTOR_TARGET_NEUTRAL_US;
 
-    float trg_throttle, trg_yaw, trg_lift;
-    int trg_motor_power;
+	float m_targetThrottle;
+	float m_targetYaw;
+	float m_targetLift;
+
+    int m_targetPower;
 
 
-    CTimer controltime;
-    CTimer thrusterOutput;
-    boolean bypasssmoothing;
+    CTimer m_controlTimer;
+    CTimer m_thrusterOutputTimer;
+
+    bool m_bypassSmoothing;
 
 #ifdef ESCPOWER_PIN
-    bool canPowerESCs = true;
-    CPin escpower( "escpower", ESCPOWER_PIN, CPin::kDigital, CPin::kOutput );
+    bool m_canPowerESCs = true;
+    CPin m_escPowerPin( "escpower", ESCPOWER_PIN, CPin::kDigital, CPin::kOutput );
 #else
-    boolean canPowerESCs = false;
+    boolean m_canPowerESCs = false;
 #endif
 }
 
 void CThrusters::Initialize()
 {
-    port_motor.m_negativeDeadzoneBuffer = NConfigManager::m_deadZoneMin;
-    port_motor.m_positiveDeadzoneBuffer = NConfigManager::m_deadZoneMax;
-    port_motor.Activate();
+	// Set up initial motor parameters
+    m_portMotor.m_negativeDeadzoneBuffer		= NConfigManager::m_deadZoneMin;
+    m_portMotor.m_positiveDeadzoneBuffer		= NConfigManager::m_deadZoneMax;
+    m_portMotor.Activate();
 
-    vertical_motor.m_negativeDeadzoneBuffer = NConfigManager::m_deadZoneMin;
-    vertical_motor.m_positiveDeadzoneBuffer = NConfigManager::m_deadZoneMax;
-    vertical_motor.Activate();
+    m_verticalMotor.m_negativeDeadzoneBuffer	= NConfigManager::m_deadZoneMin;
+    m_verticalMotor.m_positiveDeadzoneBuffer	= NConfigManager::m_deadZoneMax;
+    m_verticalMotor.Activate();
 
-    starboard_motor.m_negativeDeadzoneBuffer = NConfigManager::m_deadZoneMin;
-    starboard_motor.m_positiveDeadzoneBuffer = NConfigManager::m_deadZoneMax;
-    starboard_motor.Activate();
+    m_starboardMotor.m_negativeDeadzoneBuffer	= NConfigManager::m_deadZoneMin;
+    m_starboardMotor.m_positiveDeadzoneBuffer	= NConfigManager::m_deadZoneMax;
+    m_starboardMotor.Activate();
 
-    thrusterOutput.Reset();
-    controltime.Reset();
+	// Reset timers
+    m_thrusterOutputTimer.Reset();
+    m_controlTimer.Reset();
 
-    bypasssmoothing = false;
+    m_bypassSmoothing = false;
 
+	// Turn on ESCs, if possible
     #ifdef ESCPOWER_PIN
-    escpower.Reset();
-    escpower.Write( 1 ); //Turn on the ESCs
+    m_escPowerPin.Reset();
+    m_escPowerPin.Write( 1 ); //Turn on the ESCs
     #endif
 }
 
 void CThrusters::Update( CCommand& command )
 {
+	// Change positive motor modifiers
     if( command.Equals( "mtrmod1" ) )
     {
-        port_motor.m_positiveModifier = command.m_arguments[1] / 100;
-        vertical_motor.m_positiveModifier = command.m_arguments[2] / 100;
-        starboard_motor.m_positiveModifier = command.m_arguments[3] / 100;
+        m_portMotor.m_positiveModifier		= (float)command.m_arguments[1] / 100.0f;
+        m_verticalMotor.m_positiveModifier	= (float)command.m_arguments[2] / 100.0f;
+        m_starboardMotor.m_positiveModifier = (float)command.m_arguments[3] / 100.0f;
     }
 
+	// Change negative motor modifiers
     if( command.Equals( "mtrmod2" ) )
     {
-        port_motor.m_negativeModifier = command.m_arguments[1] / 100;
-        vertical_motor.m_negativeModifier = command.m_arguments[2] / 100;
-        starboard_motor.m_negativeModifier = command.m_arguments[3] / 100;
+        m_portMotor.m_negativeModifier		= (float)command.m_arguments[1] / 100.0f;
+        m_verticalMotor.m_negativeModifier	= (float)command.m_arguments[2] / 100.0f;
+        m_starboardMotor.m_negativeModifier = (float)command.m_arguments[3] / 100.0f;
     }
 
+	// Report motor modifiers
     if( command.Equals( "rmtrmod" ) )
     {
         Serial.print( F( "mtrmod:" ) );
-        Serial.print( port_motor.m_positiveModifier );
+        Serial.print( m_portMotor.m_positiveModifier );
         Serial.print( "," );
-        Serial.print( vertical_motor.m_positiveModifier );
+        Serial.print( m_verticalMotor.m_positiveModifier );
         Serial.print( "," );
-        Serial.print( starboard_motor.m_positiveModifier );
+        Serial.print( m_starboardMotor.m_positiveModifier );
         Serial.print( "," );
-        Serial.print( port_motor.m_negativeModifier );
+        Serial.print( m_portMotor.m_negativeModifier );
         Serial.print( "," );
-        Serial.print( vertical_motor.m_negativeModifier );
+        Serial.print( m_verticalMotor.m_negativeModifier );
         Serial.print( "," );
-        Serial.print( starboard_motor.m_negativeModifier );
+        Serial.print( m_starboardMotor.m_negativeModifier );
         Serial.println( ";" );
     }
 
+	// Set all three motor modifiers at once
     if( command.Equals( "go" ) )
     {
-        //ignore corrupt data
+        // Ignore commands that lie outside of the allowable PWM range
         if( command.m_arguments[1] > 999 && command.m_arguments[2] > 999 && command.m_arguments[3] > 999 && command.m_arguments[1] < 2001 && command.m_arguments[2] < 2001 && command.m_arguments[3] < 2001 )
         {
-            p = command.m_arguments[1];
-            v = command.m_arguments[2];
-            s = command.m_arguments[3];
+            portTarget_us = command.m_arguments[1];
+            vertTarget_us = command.m_arguments[2];
+            starTarget_us = command.m_arguments[3];
 
             if( command.m_arguments[4] == 1 )
             {
-                bypasssmoothing = true;
+                m_bypassSmoothing = true;
             }
         }
     }
 
+	// Set port motor target
     if( command.Equals( "port" ) )
     {
-        //ignore corrupt data
+		// Ignore commands that lie outside of the allowable PWM range
         if( command.m_arguments[1] > 999 && command.m_arguments[1] < 2001 )
         {
-            p = command.m_arguments[1];
+            portTarget_us = command.m_arguments[1];
 
             if( command.m_arguments[2] == 1 )
             {
-                bypasssmoothing = true;
+                m_bypassSmoothing = true;
             }
         }
     }
 
+	// Set vertical motor target
     if( command.Equals( "vertical" ) )
     {
-        //ignore corrupt data
+		// Ignore commands that lie outside of the allowable PWM range
         if( command.m_arguments[1] > 999 && command.m_arguments[1] < 2001 )
         {
-            v = command.m_arguments[1];
+            vertTarget_us = command.m_arguments[1];
 
             if( command.m_arguments[2] == 1 )
             {
-                bypasssmoothing = true;
+                m_bypassSmoothing = true;
             }
         }
     }
 
+	// Set starboard motor target
     if( command.Equals( "starboard" ) )
     {
-        //ignore corrupt data
+		// Ignore commands that lie outside of the allowable PWM range
         if( command.m_arguments[1] > 999 && command.m_arguments[1] < 2001 )
         {
-            s = command.m_arguments[1];
+            starTarget_us = command.m_arguments[1];
 
             if( command.m_arguments[2] == 1 )
             {
-                bypasssmoothing = true;
+                m_bypassSmoothing = true;
             }
         }
     }
 
+	// Handle yaw/throttle commands for both port and starboard thrusters
     if( command.Equals( "thro" ) || command.Equals( "yaw" ) )
     {
+		// Throttle
         if( command.Equals( "thro" ) )
         {
+			// Ignore values not between -100% and +100%
             if( command.m_arguments[1] >= -100 && command.m_arguments[1] <= 100 )
             {
-                trg_throttle = command.m_arguments[1] / 100.0;
+                m_targetThrottle = (float)command.m_arguments[1] / 100.0f;
             }
         }
 
         if( command.Equals( "yaw" ) )
         {
-            //ignore corrupt data
-            if( command.m_arguments[1] >= -100 && command.m_arguments[1] <= 100 ) //percent of max turn
+            // Ignore values not between -100% and +100%
+            if( command.m_arguments[1] >= -100 && command.m_arguments[1] <= 100 )
             {
-                trg_yaw = command.m_arguments[1] / 100.0;
+                m_targetYaw = (float)command.m_arguments[1] / 100.0f;
             }
         }
 
-        // The code below spreads the throttle spectrum over the possible range
-        // of the motor. Not sure this belongs here or should be placed with
-        // deadzon calculation in the motor code.
-        if( trg_throttle >= 0 )
+        // The code below spreads the throttle spectrum over the possible range of the motor. 
+		// Not sure this belongs here or should be placed with deadzone calculation in the motor code.
+        if( m_targetThrottle >= 0 )
         {
-            p = 1500 + ( 500.0 / abs( port_motor.m_positiveModifier ) ) * trg_throttle;
-            s = p;
+            portTarget_us = 1500 + ( 500.0 / abs( m_portMotor.m_positiveModifier ) ) * m_targetThrottle;
+            starTarget_us = portTarget_us;
         }
         else
         {
-            p = 1500 + ( 500.0 / abs( port_motor.m_negativeModifier ) ) * trg_throttle;
-            s = p;
+            portTarget_us = 1500 + ( 500.0 / abs( m_portMotor.m_negativeModifier ) ) * m_targetThrottle;
+            starTarget_us = portTarget_us;
         }
 
-        trg_motor_power = s;
+        m_targetPower = starTarget_us;
 
-        int turn = trg_yaw * 250; //max range due to reverse range
+        int turn = m_targetYaw * 250; //max range due to reverse range
 
-        if( trg_throttle >= 0 )
+        if( m_targetThrottle >= 0 )
         {
-            int offset = ( abs( turn ) + trg_motor_power ) - 2000;
+            int offset = ( abs( turn ) + m_targetPower ) - 2000;
 
             if( offset < 0 )
             {
                 offset = 0;
             }
 
-            p = trg_motor_power + turn - offset;
-            s = trg_motor_power - turn - offset;
+            portTarget_us = m_targetPower + turn - offset;
+            starTarget_us = m_targetPower - turn - offset;
         }
         else
         {
-            int offset = 1000 - ( trg_motor_power - abs( turn ) );
+            int offset = 1000 - ( m_targetPower - abs( turn ) );
 
             if( offset < 0 )
             {
                 offset = 0;
             }
 
-            p = trg_motor_power + turn + offset;
-            s = trg_motor_power - turn + offset;
+            portTarget_us = m_targetPower + turn + offset;
+            starTarget_us = m_targetPower - turn + offset;
         }
 
     }
@@ -234,8 +250,8 @@ void CThrusters::Update( CCommand& command )
     {
         if( command.m_arguments[1] >= -100 && command.m_arguments[1] <= 100 )
         {
-            trg_lift = command.m_arguments[1] / 100.0;
-            v = 1500 + 500 * trg_lift;
+            m_targetLift = command.m_arguments[1] / 100.0;
+            vertTarget_us = 1500 + 500 * m_targetLift;
         }
     }
 
@@ -243,7 +259,7 @@ void CThrusters::Update( CCommand& command )
     #ifdef ESCPOWER_PIN
     else if( command.Equals( "escp" ) )
     {
-        escpower.Write( command.m_arguments[1] ); //Turn on the ESCs
+        m_escPowerPin.Write( command.m_arguments[1] ); //Turn on the ESCs
         Serial.print( F( "log:escpower=" ) );
         Serial.print( command.m_arguments[1] );
         Serial.println( ';' );
@@ -252,15 +268,15 @@ void CThrusters::Update( CCommand& command )
     #endif
     else if( command.Equals( "start" ) )
     {
-        port_motor.Activate();
-        vertical_motor.Activate();
-        starboard_motor.Activate();
+        m_portMotor.Activate();
+        m_verticalMotor.Activate();
+        m_starboardMotor.Activate();
     }
     else if( command.Equals( "stop" ) )
     {
-        p = MOTOR_TARGET_NEUTRAL_US;
-        v = MOTOR_TARGET_NEUTRAL_US;
-        s = MOTOR_TARGET_NEUTRAL_US;
+        portTarget_us = MOTOR_TARGET_NEUTRAL_US;
+        vertTarget_us = MOTOR_TARGET_NEUTRAL_US;
+        starTarget_us = MOTOR_TARGET_NEUTRAL_US;
         // Not sure why the reset does not re-attach the servo.
         //port_motor.stop();
         //vertical_motor.stop();
@@ -268,7 +284,7 @@ void CThrusters::Update( CCommand& command )
     }
 
     #ifdef ESCPOWER_PIN
-    else if( ( command.Equals( "mcal" ) ) && ( canPowerESCs ) )
+    else if( ( command.Equals( "mcal" ) ) && ( m_canPowerESCs ) )
     {
         Serial.println( F( "log:Motor Callibration Staring;" ) );
         //Experimental. Add calibration code here
@@ -280,16 +296,16 @@ void CThrusters::Update( CCommand& command )
     //to reduce AMP spikes, smooth large power adjustments out. This incirmentally adjusts the motors and servo
     //to their new positions in increments.  The incriment should eventually be adjustable from the cockpit so that
     //the pilot could have more aggressive response profiles for the ROV.
-    if( controltime.HasElapsed( 50 ) )
+    if( m_controlTimer.HasElapsed( 50 ) )
     {
-        if( p != new_p || v != new_v || s != new_s )
+        if( portTarget_us != portTargetNew_us || vertTarget_us != vertTargetNew_us || starTarget_us != starTargetNew_us )
         {
-            new_p = p;
-            new_v = v;
-            new_s = s;
+            portTargetNew_us = portTarget_us;
+            vertTargetNew_us = vertTarget_us;
+            starTargetNew_us = starTarget_us;
 
             // Check to see if any motors are non-neutral to signal system that at least one motor is running
-            if( p != MOTOR_TARGET_NEUTRAL_US || v != MOTOR_TARGET_NEUTRAL_US || s != MOTOR_TARGET_NEUTRAL_US )
+            if( portTarget_us != MOTOR_TARGET_NEUTRAL_US || vertTarget_us != MOTOR_TARGET_NEUTRAL_US || starTarget_us != MOTOR_TARGET_NEUTRAL_US )
             {
                 NDataManager::m_thrusterData.MotorsActive = true;
             }
@@ -299,41 +315,41 @@ void CThrusters::Update( CCommand& command )
             }
 
             Serial.print( F( "motors:" ) );
-            Serial.print( port_motor.SetMotorTarget( new_p ) );
+            Serial.print( m_portMotor.SetMotorTarget( portTargetNew_us ) );
             Serial.print( ',' );
-            Serial.print( vertical_motor.SetMotorTarget( new_v ) );
+            Serial.print( m_verticalMotor.SetMotorTarget( vertTargetNew_us ) );
             Serial.print( ',' );
-            Serial.print( starboard_motor.SetMotorTarget( new_s ) );
+            Serial.print( m_starboardMotor.SetMotorTarget( starTargetNew_us ) );
             Serial.println( ';' );
         }
 
     }
 
-    NDataManager::m_navData.FTHR = map( ( new_p + new_s ) / 2, 1000, 2000, -100, 100 );
+    NDataManager::m_navData.FTHR = map( ( portTargetNew_us + starTargetNew_us ) / 2, 1000, 2000, -100, 100 );
 
     //The output from the motors is unique to the thruster configuration
-    if( thrusterOutput.HasElapsed( 1000 ) )
+    if( m_thrusterOutputTimer.HasElapsed( 1000 ) )
     {
         Serial.print( F( "mtarg:" ) );
-        Serial.print( p );
+        Serial.print( portTarget_us );
         Serial.print( ',' );
-        Serial.print( v );
+        Serial.print( vertTarget_us );
         Serial.print( ',' );
-        Serial.print( s );
+        Serial.print( starTarget_us );
         Serial.println( ';' );
-        NDataManager::m_thrusterData.MATC = port_motor.IsActive() || port_motor.IsActive() || port_motor.IsActive();
+        NDataManager::m_thrusterData.MATC = m_portMotor.IsActive() || m_portMotor.IsActive() || m_portMotor.IsActive();
         Serial.print( F( "mtrmod:" ) );
-        Serial.print( port_motor.m_positiveModifier );
+        Serial.print( m_portMotor.m_positiveModifier );
         Serial.print( "," );
-        Serial.print( vertical_motor.m_positiveModifier );
+        Serial.print( m_verticalMotor.m_positiveModifier );
         Serial.print( "," );
-        Serial.print( starboard_motor.m_positiveModifier );
+        Serial.print( m_starboardMotor.m_positiveModifier );
         Serial.print( "," );
-        Serial.print( port_motor.m_negativeModifier );
+        Serial.print( m_portMotor.m_negativeModifier );
         Serial.print( "," );
-        Serial.print( vertical_motor.m_negativeModifier );
+        Serial.print( m_verticalMotor.m_negativeModifier );
         Serial.print( "," );
-        Serial.print( starboard_motor.m_negativeModifier );
+        Serial.print( m_starboardMotor.m_negativeModifier );
         Serial.println( ";" );
     }
 }

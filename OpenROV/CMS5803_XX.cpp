@@ -344,6 +344,7 @@ void CMS5803::readSensor()
 
 	// Set output depth, adjusting for offset if necessary
 	NDataManager::m_navData.DEEP = m_depth - m_depthOffset;
+	NDataManager::m_controllerData.depth = NDataManager::m_navData.DEEP;
 
 	// Start other temperature conversions by converting mbar to psi absolute
 	//    psiAbs = mbar * 0.0145038;

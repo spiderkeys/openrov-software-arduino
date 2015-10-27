@@ -119,7 +119,10 @@ void CPIDControllerAngular::Compute()
 
 	if( timeChange >= m_samplingPeriod_ms )
 	{
-		NDataManager::m_controllerData.yawError	= *m_pSetpoint - *m_pInput;
+
+		//Test
+		NDataManager::m_controllerData.yawError	= NORMALIZE_ANGLE( *m_pSetpoint - *m_pInput );
+
 		float dInput	= NORMALIZE_ANGLE( *m_pInput - m_lastInput );
 
 		// Update pTerm
@@ -176,8 +179,6 @@ void CPIDControllerLinear::Compute()
 	if( timeChange >= m_samplingPeriod_ms )
 	{
 		NDataManager::m_controllerData.yawError	= *m_pSetpoint - *m_pInput;
-
-
 
 		float dInput	= ( *m_pInput - m_lastInput );
 

@@ -38,6 +38,11 @@ CThrusters m_thrusters;
 CAutopilot m_autopilot;
 #endif
 
+#if(HAS_EXP_AUTOPILOT)
+#include "CAutopilot.h"
+CAutopilot m_autopilot;
+#endif
+
 #if(HAS_STD_CAMERAMOUNT)
 #include "CCameraMount.h"
 CCameraMount m_cameraMount;

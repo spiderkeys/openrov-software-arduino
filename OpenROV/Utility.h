@@ -12,6 +12,25 @@
     #define NORMALIZE_ANGLE(a) ((a > 180.0) ? (a - 360.0) : ((a < -180.0) ? (a + 360.0) : a))
 #endif
 
+//	if( a > 180.0f )
+//	{
+		// a= 358
+//		return a - 360.0f;		// -2
+//	}
+//	else
+//	{
+//		if( a < -180.0f )
+//		{
+			// a = -200
+//			return a + 360.0f;	// 160
+//		}
+//		else
+//		{
+			// a = 10
+//			return a;			// 10
+//		}
+//	}
+
 namespace util
 {
     extern "C"

@@ -19,17 +19,62 @@ namespace
 	CPIDControllerAngular	m_yawController( 0.01f, 0.0f, 0.0f, -1.0f, 1.0f, PID_CONTROLLER_DIRECTION_DIRECT, 10 );
 	CPIDControllerLinear	m_depthController( 0.01f, 0.0f, 0.0f, -1.0f, 1.0f, PID_CONTROLLER_DIRECTION_DIRECT, 10 );
 
+	bool headingHoldEnabled = false;
+	bool depthHoldEnabled = false;
+
 	void HandleCommands()
 	{
-		if( !NCommManager::m_isCommandAvailable )
+		if (NCommManager::m_currentCommand.Equals( "holdHeading_toggle" ))
 		{
-			// No commands to process
-			return;
+			if (m_yawController.m_isActive)
+			{
+				int m_argumentsToSend[] = { 0 }; //include number of parms as fist parm
+				NCommManager::m_currentCommand.PushCommand( "headloff", m_argumentsToSend );
+			}
+			else
+			{
+				if (NCommManager::m_currentCommand.m_arguments[ 0 ] == 0)
+				{
+					int m_argumentsToSend[] = { 0 }; //include number of parms as fist parm
+					NCommManager::m_currentCommand.PushCommand( "headlon", m_argumentsToSend );
+				}
+				else
+				{
+					int m_argumentsToSend[] = { 1, NCommManager::m_currentCommand.m_arguments[ 1 ] }; //include number of parms as fist parm
+					NCommManager::m_currentCommand.PushCommand( "headlon", m_argumentsToSend );
+				}
+
+			}
+		}
+
+		if (NCommManager::m_currentCommand.Equals( "holdDepth_toggle" ))
+		{
+			if (m_depthController.m_isActive)
+			{
+				int m_argumentsToSend[] = { 0 }; //include number of parms as fist parm
+				NCommManager::m_currentCommand.PushCommand( "deptloff", m_argumentsToSend );
+			}
+			else
+			{
+				if (NCommManager::m_currentCommand.m_arguments[ 0 ] == 0)
+				{
+					int m_argumentsToSend[] = { 0 }; //include number of parms as fist parm
+					NCommManager::m_currentCommand.PushCommand( "deptlon", m_argumentsToSend );
+				}
+				else
+				{
+					int m_argumentsToSend[] = { 1, NCommManager::m_currentCommand.m_arguments[ 1 ] }; //include number of parms as fist parm
+					NCommManager::m_currentCommand.PushCommand( "deptlon", m_argumentsToSend );
+				}
+
+			}
 		}
 
 		// Disable heading controller
 		if( NCommManager::m_currentCommand.Equals( "headloff" ) )
 		{
+			Serial.println( "AutoExp.Command:HeadingOff;" );
+
 			// Deactivate PID controller
 			m_yawController.Deactivate();
 
@@ -49,6 +94,8 @@ namespace
 		// Enable heading controller
 		if( NCommManager::m_currentCommand.Equals( "headlon" ) )
 		{
+			Serial.println( "AutoExp.Command:HeadingOn;" );
+
 			if( NCommManager::m_currentCommand.m_arguments[0] == 0 )
 			{
 				// Set the new target to our current heading
@@ -77,6 +124,8 @@ namespace
 		// Disable depth controller
 		if( NCommManager::m_currentCommand.Equals( "deptloff" ) )
 		{
+			Serial.println( "AutoExp.Command:DepthOff;" );
+
 			// Deactivate PID controller
 			m_depthController.Deactivate();
 
@@ -96,6 +145,8 @@ namespace
 		// Enable depth controller
 		if( NCommManager::m_currentCommand.Equals( "deptlon" ) )
 		{
+			Serial.println( "AutoExp.Command:DepthOn;" );
+
 			if( NCommManager::m_currentCommand.m_arguments[0] == 0 )
 			{
 				NDataManager::m_controllerData.depthSetpoint = NDataManager::m_controllerData.depth;
@@ -123,8 +174,19 @@ namespace
 	{
 		if( m_depthController.m_isActive )
 		{
-			// Map from -1to1 to -100to100
-			int lift = static_cast<int>( NDataManager::m_controllerData.depthCommand * 100.0f );
+			// Map from -1to1 to -100to100, barring -10-10, exclusion for 0
+			float output = NDataManager::m_controllerData.depthCommand;
+
+			if (output >= -0.12f && output <= -0.01f)
+			{
+				output = -0.12f;
+			}
+			else if (output >= 0.01f && output <= 0.12f)
+			{
+				output = 0.12f;
+			}
+
+			int lift = static_cast<int>( output * 10000.0f );
 
 			// TODO: Perform any deadbanding if necessary
 
@@ -140,7 +202,7 @@ namespace
 
 			// Send lift command
 			int m_argumentsToSend[] = { 1, lift };
-			NCommManager::m_currentCommand.PushCommand( "lift", m_argumentsToSend );
+			NCommManager::m_currentCommand.PushCommand( "autoLift", m_argumentsToSend );
 		}
 	}
 
@@ -148,8 +210,19 @@ namespace
 	{
 		if( m_yawController.m_isActive )
 		{
-			// Map from -1to1 to -100to100
-			int yaw = static_cast<int>( NDataManager::m_controllerData.yawCommand * 50.0f );
+			// Map from -1to1 to -100to100, barring -10-10, exclusion for 0
+			float output = NDataManager::m_controllerData.yawCommand;
+
+			if( output >= -0.12f && output <= -0.01f )
+			{
+				output = -0.12f;
+			}
+			else if( output >= 0.01f && output <= 0.12f )
+			{
+				output = 0.12f;
+			}
+
+			int yaw = static_cast<int>( output * 10000.0f );
 
 			// TODO: Perform any deadbanding if necessary
 
@@ -165,7 +238,7 @@ namespace
 
 			// Send yaw command
 			int m_argumentsToSend[] = { 1, yaw };
-			NCommManager::m_currentCommand.PushCommand( "yaw", m_argumentsToSend );
+			NCommManager::m_currentCommand.PushCommand( "autoYaw", m_argumentsToSend );
 		}
 	}
 

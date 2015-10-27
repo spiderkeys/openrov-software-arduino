@@ -28,17 +28,18 @@
 #define HAS_STD_LIGHTS (1)
 #define HAS_STD_CALIBRATIONLASERS (1)
 #define HAS_STD_CAMERAMOUNT (1)
-#define HAS_STD_AUTOPILOT (1)
-#define HAS_EXP_AUTOPILOT (0)
+#define HAS_STD_AUTOPILOT (0)
+#define HAS_EXP_AUTOPILOT (1)
 #define HAS_ALT_SERVO (1)
-#define DEADMANSWITCH_ON (1)
+#define DEADMANSWITCH_ON (0)
 
 // Thrusters configurations
 #define THRUSTER_CONFIG_NONE (0)
 #define THRUSTER_CONFIG_2X1 (1)
+#define THRUSTER_CONFIG_2X1_EXP (2)
 
 // Selected Thruster Configuration
-#define THRUSTER_CONFIGURATION THRUSTER_CONFIG_2X1
+#define THRUSTER_CONFIGURATION THRUSTER_CONFIG_2X1_EXP
 
 
 // ---------------------------------------------------------
